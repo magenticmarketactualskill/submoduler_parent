@@ -9,7 +9,8 @@ module SubmodulerParent
       'test' => 'Run tests across parent and all child submodules',
       'push' => 'Push changes to parent and all child submodules',
       'report' => 'Generate configuration and status reports',
-      'release' => 'Manage release workflow for parent and children'
+      'release' => 'Manage release workflow for parent and children',
+      'symlink_build' => 'Build symlinks from vendor gems to parent .kiro/steering'
     }.freeze
 
     def self.run(args)
@@ -66,9 +67,11 @@ module SubmodulerParent
         StatusCommand.new(@args).execute
       when 'test'
         TestCommand.new(@args).execute
-      when 'push'
-        puts "Push command not yet implemented"
+      when 'symlink_build'
+        SymlinkBuildCommand.run
         0
+      when 'push'
+        PushCommand.new(@args).execute
       when 'report'
         puts "Report command not yet implemented"
         0
