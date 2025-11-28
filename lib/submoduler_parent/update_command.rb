@@ -179,7 +179,7 @@ module SubmodulerParent
       system("git add .")
       
       puts "Committing changes..."
-      message = "Update parent repository #{Time.now.strftime('%Y-%m-%d %H:%M:%S')}"
+      message = generate_commit_message
       system("git commit -m '#{message}'")
       
       if $?.success?
@@ -220,6 +220,104 @@ module SubmodulerParent
       end
       
       false
+    end
+
+    def generate_commit_message
+      # Get parent version
+      parent_version = get_parent_version
+      
+      # Get highest child version
+      child_version = get_highest_child_version
+      
+      # Build commit message
+      parts = []
+      parts << "Bump parent version to #{parent_version}" if parent_version
+      parts << "Bump child version to #{child_version}" if child_version
+      parts << "update scripts"
+      
+      parts.join('. ')
+    end
+
+    def get_parent_version
+      # Look for version file in parent
+      version_file = find_parent_version_file
+      return nil unless version_file
+      
+      extract_version_from_file(version_file)
+    end
+
+    def find_parent_version_file
+      # Common patterns for version files in parent
+      patterns = [
+        "lib/**/version.rb",
+        "lib/*/version.rb"
+      ]
+      
+      patterns.each do |pattern|
+        files = Dir.glob(pattern)
+        return files.first if files.any?
+      end
+      
+      nil
+    end
+
+    def get_highest_child_version
+      return nil if @updated_submodules.empty?
+      
+      versions = []
+      
+      @updated_submodules.each do |name|
+        # Find the submodule info
+        submodule = get_submodules.find { |sm| sm[:name] == name }
+        next unless submodule
+        
+        version = get_submodule_version(submodule[:path])
+        versions << version if version
+      end
+      
+      return nil if versions.empty?
+      
+      # Return highest version
+      versions.max_by { |v| version_to_comparable(v) }
+    end
+
+    def get_submodule_version(path)
+      version_file = find_submodule_version_file(path)
+      return nil unless version_file
+      
+      extract_version_from_file(version_file)
+    end
+
+    def find_submodule_version_file(path)
+      patterns = [
+        "#{path}/lib/**/version.rb",
+        "#{path}/lib/*/version.rb"
+      ]
+      
+      patterns.each do |pattern|
+        files = Dir.glob(pattern)
+        return files.first if files.any?
+      end
+      
+      nil
+    end
+
+    def extract_version_from_file(file_path)
+      content = File.read(file_path)
+      
+      # Match VERSION = "x.y.z" pattern
+      if content =~ /VERSION\s*=\s*["']([^"']+)["']/
+        $1
+      else
+        nil
+      end
+    rescue StandardError
+      nil
+    end
+
+    def version_to_comparable(version)
+      # Convert "1.2.3" to [1, 2, 3] for comparison
+      version.split('.').map(&:to_i)
     end
 
     def display_summary
