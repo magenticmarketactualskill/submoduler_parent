@@ -93,8 +93,9 @@ module SubmodulerParent
         return
       end
       
-      # Check if it's a git repository
-      unless Dir.exist?(File.join(path, '.git'))
+      # Check if it's a git repository (either .git directory or .git file for submodules)
+      git_path = File.join(path, '.git')
+      unless File.exist?(git_path)
         puts "✗ Not a git repository: #{path}"
         @skipped_submodules << name
         return
