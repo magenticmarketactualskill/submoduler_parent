@@ -9,6 +9,7 @@ module SubmodulerParent
       'status' => 'Display status of parent and all child submodules',
       'test' => 'Run tests across parent and all child submodules',
       'update' => 'Update all child submodules (test, commit, bump, push)',
+      'sync_version' => 'Sync all submodules to the highest version found',
       'push' => 'Push changes to parent and all child submodules',
       'report' => 'Generate configuration and status reports',
       'release' => 'Manage release workflow for parent and children',
@@ -72,6 +73,8 @@ module SubmodulerParent
         TestCommand.new(@args).execute
       when 'update'
         UpdateCommand.new(@args).execute
+      when 'sync_version'
+        SyncVersionCommand.new(@args).execute
       when 'symlink_build'
         SymlinkBuildCommand.run
         0
