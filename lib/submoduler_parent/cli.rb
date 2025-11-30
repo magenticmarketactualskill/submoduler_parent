@@ -12,8 +12,7 @@ module SubmodulerParent
       'sync_version' => 'Sync all submodules to the highest version found',
       'push' => 'Push changes to parent and all child submodules',
       'report' => 'Generate configuration and status reports',
-      'release' => 'Manage release workflow for parent and children',
-      'symlink_build' => 'Build symlinks from vendor gems to parent .kiro/steering'
+      'release' => 'Manage release workflow for parent and children'
     }.freeze
 
     def self.run(args)
@@ -75,9 +74,6 @@ module SubmodulerParent
         UpdateCommand.new(@args).execute
       when 'sync_version'
         SyncVersionCommand.new(@args).execute
-      when 'symlink_build'
-        SymlinkBuildCommand.run
-        0
       when 'push'
         PushCommand.new(@args).execute
       when 'report'
