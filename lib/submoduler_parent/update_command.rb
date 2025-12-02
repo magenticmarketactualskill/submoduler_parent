@@ -54,6 +54,10 @@ module SubmodulerParent
       OptionParser.new do |opts|
         opts.banner = "Usage: bin/submoduler update [options]"
         
+        opts.on("-m", "--message MESSAGE", "Commit message (required)") do |v|
+          @options[:message] = v
+        end
+        
         opts.on("--[no-]release", "Create GitHub releases for updated submodules") do |v|
           @options[:release] = v
         end
@@ -71,6 +75,13 @@ module SubmodulerParent
           exit 0
         end
       end.parse!(@args)
+      
+      # Validate required options
+      unless @options[:message] || @options[:skip_parent]
+        puts "Error: --message (-m) is required unless --skip-parent is specified"
+        puts "Usage: bin/submoduler update -m 'commit message' [options]"
+        exit 1
+      end
     end
 
     def get_submodules
@@ -129,6 +140,7 @@ module SubmodulerParent
         
         # Build the command
         cmd = "#{relative_path} update"
+        cmd += " -m '#{@options[:message]}'" if @options[:message]
         cmd += " --release" if @options[:release]
         
         puts "Running: #{cmd}"
@@ -179,7 +191,7 @@ module SubmodulerParent
       system("git add .")
       
       puts "Committing changes..."
-      message = generate_commit_message
+      message = @options[:message] || generate_commit_message
       system("git commit -m '#{message}'")
       
       if $?.success?
