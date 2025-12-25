@@ -11,6 +11,7 @@ module SubmodulerParent
       'update' => 'Update all child submodules (test, commit, bump, push)',
       'sync_version' => 'Sync all submodules to the highest version found',
       'push' => 'Push changes to parent and all child submodules',
+      'add_branch' => 'Create a branch across parent, submodules, and vendors',
       'report' => 'Generate configuration and status reports',
       'release' => 'Manage release workflow for parent and children'
     }.freeze
@@ -76,6 +77,8 @@ module SubmodulerParent
         SyncVersionCommand.new(@args).execute
       when 'push'
         PushCommand.new(@args).execute
+      when 'add_branch'
+        AddBranchCommand.new(@args).execute
       when 'report'
         puts "Report command not yet implemented"
         0
