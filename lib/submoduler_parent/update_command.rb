@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'optparse'
+require 'submoduler_common'
 
 module SubmodulerParent
   class UpdateCommand
@@ -132,6 +133,37 @@ module SubmodulerParent
         return
       end
       
+      # Detect and handle uncommitted changes before running submodule update
+      change_detector = SubmodulerCommon::ChangeDetector.new(path)
+      git_manager = SubmodulerCommon::GitManager.new(path)
+      
+      if change_detector.has_changes?
+        puts "Detected uncommitted changes in #{name}:"
+        
+        # Auto-commit working tree changes if any exist
+        unless change_detector.git_clean?
+          puts "  Committing working tree changes..."
+          message = @options[:message] || "Auto-commit changes before submoduler update"
+          unless git_manager.auto_commit_changes(message)
+            puts "✗ Failed to commit changes in #{name}"
+            @failed_submodules << name
+            return
+          end
+        end
+        
+        # Push any unpushed commits
+        if change_detector.has_unpushed_commits?
+          puts "  Pushing unpushed commits..."
+          unless git_manager.push_to_remote
+            puts "✗ Failed to push changes in #{name}"
+            @failed_submodules << name
+            return
+          end
+        end
+        
+        puts "✓ Changes committed and pushed in #{name}"
+      end
+      
       # Run update command in submodule
       Dir.chdir(path) do
         # Calculate relative path to bin/submoduler from submodule
@@ -170,7 +202,7 @@ module SubmodulerParent
       puts "Updating: Parent Repository"
       puts ""
       
-      # Check if there are any changes
+      # Check if there are any changes (including submodule pointer updates)
       status_output = `git status --porcelain`
       
       if status_output.strip.empty?
@@ -179,6 +211,13 @@ module SubmodulerParent
         return
       end
       
+      # Show what changes we're about to commit
+      puts "Changes detected:"
+      status_output.each_line do |line|
+        puts "  #{line.strip}"
+      end
+      puts ""
+      
       # Run tests if available
       if run_parent_tests
         puts "✓ Tests passed"
@@ -186,7 +225,7 @@ module SubmodulerParent
         puts "⚠ No tests found or tests failed"
       end
       
-      # Stage and commit changes
+      # Stage and commit changes (including submodule pointer updates)
       puts "Staging changes..."
       system("git add .")
       
