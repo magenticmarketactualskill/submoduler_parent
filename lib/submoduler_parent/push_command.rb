@@ -13,13 +13,16 @@ module SubmodulerParent
     def execute
       puts "Pushing changes to parent and child repositories..."
       puts ""
-      
+
       # First push children
       push_children
-      
+
+      # Push vendor repos
+      push_vendors
+
       # Then push parent
       push_parent
-      
+
       puts ""
       puts "✓ Push complete"
       0
@@ -80,22 +83,86 @@ module SubmodulerParent
 
     def push_children
       return unless File.exist?('.gitmodules')
-      
+
       submodules = parse_gitmodules
-      
+
       if submodules.empty?
         puts "ℹ No child submodules found"
         puts ""
         return
       end
-      
+
       puts "Child Submodules:"
-      
+
       submodules.each do |submodule|
         push_submodule(submodule)
       end
-      
+
       puts ""
+    end
+
+    def push_vendors
+      return unless Dir.exist?('vendor')
+
+      vendor_repos = find_vendor_repos
+
+      if vendor_repos.empty?
+        return
+      end
+
+      puts "Vendor Repositories:"
+
+      vendor_repos.each do |repo|
+        push_vendor_repo(repo)
+      end
+
+      puts ""
+    end
+
+    def find_vendor_repos
+      repos = []
+      Dir.glob('vendor/*').each do |path|
+        next unless File.directory?(path)
+        next unless Dir.exist?(File.join(path, '.git'))
+
+        repos << { name: File.basename(path), path: path }
+      end
+      repos
+    end
+
+    def push_vendor_repo(repo)
+      path = repo[:path]
+      name = repo[:name]
+
+      puts "  #{name}:"
+
+      Dir.chdir(path) do
+        # Check if there are commits to push
+        ahead_count = `git rev-list @{u}..HEAD --count 2>/dev/null`.strip.to_i
+
+        if ahead_count == 0
+          puts "    ℹ No commits to push"
+          return
+        end
+
+        puts "    → Pushing #{ahead_count} commit(s)..."
+
+        if @dry_run
+          puts "    [DRY RUN] Would push to origin"
+        else
+          output = `git push 2>&1`
+
+          if $?.success?
+            puts "    ✓ Pushed successfully"
+          else
+            puts "    ✗ Push failed:"
+            output.each_line do |line|
+              puts "      #{line.strip}"
+            end
+            # Don't raise, continue with other repos
+          end
+        end
+      end
     end
 
     def parse_gitmodules
